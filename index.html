@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     
     <style>
         :root {
@@ -57,18 +56,18 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            transition: left 1.2s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                        transform 1.2s cubic-bezier(0.25, 0.8, 0.25, 1), 
+            left: 22.5%; width: 55%;
+            transition: transform 0.75s cubic-bezier(0.25, 0.8, 0.25, 1),
                         opacity 1.2s ease-in-out;
             background: var(--panel-bg); 
-            backdrop-filter: blur(12px);
             border: 1px solid var(--border-color);
             border-radius: 1.5rem; 
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transform: translateZ(0); 
             backface-visibility: hidden;
+            contain: layout paint style;
+            will-change: transform, opacity;
             padding: 0.75rem; 
         }
 
@@ -94,25 +93,22 @@
         
         /* New aggressive text shadow for the header */
         .heavy-shadow {
-            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 4px rgba(0, 0, 0, 1);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
         }
         
         /* --- POSITIONS --- */
         .pos-center { 
-            left: 22.5%; width: 55%; 
-            z-index: 30; opacity: 1; transform: scale(1.0); filter: brightness(1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            z-index: 30; opacity: 1; transform: translate3d(0, 0, 0) scale(1);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
         }
         .pos-right { 
-            left: 90%; width: 25%; 
-            z-index: 20; opacity: 0.6; transform: scale(0.85); filter: brightness(0.5);
+            z-index: 20; opacity: 0.45; transform: translate3d(122%, 0, 0) scale(0.45);
         }
         .pos-left { 
-            left: -15%; width: 25%; 
-            z-index: 20; opacity: 0.6; transform: scale(0.85); filter: brightness(0.5);
+            z-index: 20; opacity: 0.45; transform: translate3d(-122%, 0, 0) scale(0.45);
         }
-        .pos-hidden-right { left: 110%; width: 25%; z-index: 10; opacity: 0; transform: scale(0.8); }
-        .pos-hidden-left { left: -35%; width: 25%; z-index: 10; opacity: 0; transform: scale(0.8); }
+        .pos-hidden-right { z-index: 10; opacity: 0; transform: translate3d(150%, 0, 0) scale(0.4); }
+        .pos-hidden-left { z-index: 10; opacity: 0; transform: translate3d(-150%, 0, 0) scale(0.4); }
         .pos-hidden { display: none; }
 
         .pos-center .detail-view { display: block; animation: fadeIn 1s ease-in forwards; }
@@ -140,6 +136,12 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
         @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
         #ui-wrapper { transition: transform 1s ease-in-out; }
+        .backdrop-blur-sm, .backdrop-blur, .backdrop-blur-md { backdrop-filter: none !important; }
+        iframe { contain: strict; }
+        @media (prefers-reduced-motion: reduce) {
+            .carousel-item, .v-carousel-track, #bg-layer, #ui-wrapper { transition-duration: 0.2s !important; }
+            .pos-center .detail-view { animation: none; }
+        }
     </style>
 </head>
 <body>
@@ -699,7 +701,8 @@
 
         function previewBackground(genre) {
             const list = WALLPAPERS[genre] || WALLPAPERS.nature;
-            const url = list[Math.floor(Math.random() * list.length)];
+            const url = list[Math.floor(Math.random() * list.length)]
+                .replace('w=1080&h=1920&q=80', 'w=900&h=1600&q=65');
             const bg = document.getElementById('bg-layer');
             bg.style.backgroundImage = `url('${url}')`;
         }
@@ -1038,6 +1041,11 @@
                 else if (index === leftIndex) el.classList.add('pos-left');
                 else if (index === rightIndex) el.classList.add('pos-right');
                 else el.classList.add('pos-hidden'); 
+
+                // Live embedded pages are costly to paint on a Raspberry Pi.
+                // Keep them loaded, but paint only the active centre panel.
+                const frame = el.querySelector('iframe');
+                if (frame) frame.style.visibility = index === currentIdx ? 'visible' : 'hidden';
             });
         }
 
@@ -1068,7 +1076,8 @@
         updateClock(); 
         updateBackground(true);
         
-        setInterval(updateClock, 1000);
+        // Only hours and minutes are displayed, so a per-second repaint is wasteful.
+        setInterval(updateClock, 60000);
         setInterval(protectBurnIn, 60000);
         setInterval(fetchWeather, 3600000);
         
